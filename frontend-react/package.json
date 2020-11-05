@@ -1,0 +1,33 @@
+{
+  "name": "carfront",
+  "version": "0.1.0",
+  "private": true,
+  "dependencies": {
+    "@elastic/apm-rum": "^4.9.1",
+    "@elastic/apm-rum-react": "^0.3.2",
+    "@material-ui/core": "^4.11.0",
+    "@material-ui/icons": "^4.2.1",
+    "react": "^16.8.6",
+    "react-confirm-alert": "^2.6.2",
+    "react-csv": "^1.1.2",
+    "react-dom": "^16.8.6",
+    "react-scripts": "^4.0.0",
+    "react-skylight": "^0.5.1",
+    "react-table": "^6.11.5"
+  },
+  "scripts": {
+    "start": "react-scripts start",
+    "build": "react-scripts build",
+    "test": "react-scripts test",
+    "eject": "react-scripts eject"
+  },
+  "eslintConfig": {
+    "extends": "react-app"
+  },
+  "browserslist": [
+    ">0.2%",
+    "not dead",
+    "not ie <= 11",
+    "not op_mini all"
+  ]
+}

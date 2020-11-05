@@ -1,0 +1,14 @@
+# Backend Estimator
+backend-estimator/backend-estimator.log
+backend-estimator/backend-estimator.log.json
+backend-estimator/target
+backend-estimator/.vscode
+
+# Backend Database
+backend-database/backend-database.log
+backend-database/backend-database.log.json
+backend-database/target
+backend-database/.vscode
+
+# Frontend React
+frontend-react/node_modules/*
