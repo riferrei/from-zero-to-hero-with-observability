@@ -7,7 +7,7 @@ heartbeat.monitors:
 - type: http
   id: frontend-react
   name: Frontend React
-  urls: ["http://localhost:3000"]
+  urls: ["http://frontend-react:3000"]
   schedule: '@every 5s'
 
 setup.template.settings:

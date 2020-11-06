@@ -7,7 +7,7 @@ heartbeat.monitors:
 - type: http
   id: backend-database
   name: Backend Database
-  urls: ["http://localhost:8080/actuator/health"]
+  urls: ["http://backend-database:8080/actuator/health"]
   schedule: '@every 5s'
 
 setup.template.settings:

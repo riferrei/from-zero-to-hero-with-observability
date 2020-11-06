@@ -7,7 +7,7 @@ heartbeat.monitors:
 - type: http
   id: backend-estimator
   name: Backend Estimator
-  urls: ["http://localhost:8888/actuator/health"]
+  urls: ["http://backend-estimator:8888/actuator/health"]
   schedule: '@every 5s'
 
 setup.template.settings:
