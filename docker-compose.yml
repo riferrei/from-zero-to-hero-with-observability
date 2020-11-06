@@ -1,5 +1,71 @@
 version: '2.2'
+
 services:
+
+  frontend-react:
+    build: ./frontend-react
+    image: frontend-react:latest
+    container_name: frontend-react
+    hostname: frontend-react
+    ports:
+      - "3000:3000"
+    networks:
+      - elastic
+    depends_on:
+      backend-database:
+        condition: service_healthy
+    healthcheck:
+      interval: 10s
+      retries: 20
+      test: curl --write-out 'HTTP %{http_code}' --fail --silent --output /dev/null http://localhost:3000
+      
+  backend-database:
+    build: ./backend-database
+    image: backend-database:latest
+    container_name: backend-database
+    hostname: backend-database
+    ports:
+      - "8080:8080"
+    networks:
+      - elastic
+    depends_on:
+      backend-estimator:
+        condition: service_healthy
+    environment:
+      - ELASTIC_APM_SERVICE_NAME=backend-database
+      - ELASTIC_APM_SERVER_URL=http://apm-server:8200
+      - ELASTIC_APM_APPLICATION_PACKAGES=com.riferrei.database.*
+      - ELASTIC_APM_PROFILING_INFERRED_SPANS_ENABLED=true
+      - ELASTIC_APM_ENABLE_LOG_CORRELATION=true
+      - BACKEND_ESTIMATOR_URI=http://backend-estimator:8888/estimateValue
+    healthcheck:
+      interval: 10s
+      retries: 20
+      test: curl --write-out 'HTTP %{http_code}' --fail --silent --output /dev/null http://localhost:8080/actuator/health
+
+  backend-estimator:
+    build: ./backend-estimator
+    image: backend-estimator:latest
+    container_name: backend-estimator
+    hostname: backend-estimator
+    ports:
+      - "8888:8888"
+    networks:
+      - elastic
+    depends_on:
+      apm-server:
+        condition: service_healthy
+    environment:
+      - ELASTIC_APM_SERVICE_NAME=backend-estimator
+      - ELASTIC_APM_SERVER_URL=http://apm-server:8200
+      - ELASTIC_APM_APPLICATION_PACKAGES=com.riferrei.estimator.*
+      - ELASTIC_APM_TRACE_METHODS=com.riferrei.estimator.*
+      - ELASTIC_APM_ENABLE_LOG_CORRELATION=true
+    healthcheck:
+      interval: 10s
+      retries: 20
+      test: curl --write-out 'HTTP %{http_code}' --fail --silent --output /dev/null http://localhost:8888/actuator/health
+
   apm-server:
     image: docker.elastic.co/apm/apm-server:7.9.3
     container_name: apm-server
@@ -68,67 +134,6 @@ services:
       interval: 10s
       retries: 20
       test: curl --write-out 'HTTP %{http_code}' --fail --silent --output /dev/null http://localhost:5601/api/status
-
-  backend-estimator:
-    build: ./backend-estimator
-    image: backend-estimator:latest
-    container_name: backend-estimator
-    ports:
-      - "8888:8888"
-    networks:
-      - elastic
-    depends_on:
-      apm-server:
-        condition: service_healthy
-    environment:
-      - ELASTIC_APM_SERVICE_NAME=backend-estimator
-      - ELASTIC_APM_SERVER_URL=http://apm-server:8200
-      - ELASTIC_APM_APPLICATION_PACKAGES=com.riferrei.estimator.*
-      - ELASTIC_APM_TRACE_METHODS=com.riferrei.estimator.*
-      - ELASTIC_APM_ENABLE_LOG_CORRELATION=true
-    healthcheck:
-      interval: 10s
-      retries: 20
-      test: curl --write-out 'HTTP %{http_code}' --fail --silent --output /dev/null http://localhost:8888/actuator/health
-      
-  backend-database:
-    build: ./backend-database
-    image: backend-database:latest
-    container_name: backend-database
-    ports:
-      - "8080:8080"
-    networks:
-      - elastic
-    depends_on:
-      backend-estimator:
-        condition: service_healthy
-    environment:
-      - ELASTIC_APM_SERVICE_NAME=backend-database
-      - ELASTIC_APM_SERVER_URL=http://apm-server:8200
-      - ELASTIC_APM_APPLICATION_PACKAGES=com.riferrei.database.*
-      - ELASTIC_APM_PROFILING_INFERRED_SPANS_ENABLED=true
-      - ELASTIC_APM_ENABLE_LOG_CORRELATION=true
-      - BACKEND_ESTIMATOR_URI=http://backend-estimator:8888/estimateValue
-    healthcheck:
-      interval: 10s
-      retries: 20
-      test: curl --write-out 'HTTP %{http_code}' --fail --silent --output /dev/null http://localhost:8080/actuator/health
-      
-  frontend-react:
-    build: ./frontend-react
-    image: frontend-react:latest
-    container_name: frontend-react
-    ports:
-      - "3000:3000"
-    networks:
-      - elastic
-    depends_on:
-      backend-database:
-        condition: service_healthy
-    healthcheck:
-      interval: 10s
-      retries: 20
-      test: curl --write-out 'HTTP %{http_code}' --fail --silent --output /dev/null http://localhost:3000
 
 volumes:
   esdata:
