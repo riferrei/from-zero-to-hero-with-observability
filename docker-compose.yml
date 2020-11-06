@@ -100,7 +100,7 @@ services:
     networks:
       - elastic
     depends_on:
-      apm-server:
+      backend-estimator:
         condition: service_healthy
     environment:
       - ELASTIC_APM_SERVICE_NAME=backend-database
