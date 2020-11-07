@@ -16,7 +16,7 @@ services:
         condition: service_healthy
     healthcheck:
       interval: 10s
-      retries: 20
+      retries: 100
       test: curl --write-out 'HTTP %{http_code}' --fail --silent --output /dev/null http://localhost:3000
       
   backend-database:
@@ -40,7 +40,7 @@ services:
       - BACKEND_ESTIMATOR_URI=http://backend-estimator:8888/estimateValue
     healthcheck:
       interval: 10s
-      retries: 20
+      retries: 100
       test: curl --write-out 'HTTP %{http_code}' --fail --silent --output /dev/null http://localhost:8080/actuator/health
 
   backend-estimator:
@@ -63,7 +63,7 @@ services:
       - ELASTIC_APM_ENABLE_LOG_CORRELATION=true
     healthcheck:
       interval: 10s
-      retries: 20
+      retries: 100
       test: curl --write-out 'HTTP %{http_code}' --fail --silent --output /dev/null http://localhost:8888/actuator/health
 
   apm-server:
