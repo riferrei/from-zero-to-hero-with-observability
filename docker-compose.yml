@@ -22,8 +22,12 @@ services:
   backend-database:
     build: ./backend-database
     image: backend-database:latest
+    cap_add:
+      - AUDIT_CONTROL
+      - AUDIT_READ
     container_name: backend-database
     hostname: backend-database
+    pid: host
     ports:
       - "8080:8080"
     networks:
@@ -46,8 +50,12 @@ services:
   backend-estimator:
     build: ./backend-estimator
     image: backend-estimator:latest
+    cap_add:
+      - AUDIT_CONTROL
+      - AUDIT_READ
     container_name: backend-estimator
     hostname: backend-estimator
+    pid: host
     ports:
       - "8888:8888"
     networks:

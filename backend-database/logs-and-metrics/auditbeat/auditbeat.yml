@@ -29,7 +29,6 @@ auditbeat.modules:
     - host
     - login
     - process
-    - socket
     - user
 
   state.period: 12h
