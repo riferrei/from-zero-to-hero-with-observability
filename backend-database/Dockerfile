@@ -30,6 +30,11 @@ RUN curl -L -O https://artifacts.elastic.co/downloads/beats/heartbeat/heartbeat-
 RUN dpkg -i heartbeat-7.9.3-amd64.deb
 RUN cp logs-and-metrics/heartbeat/heartbeat.yml /etc/heartbeat
 
+# Audit instrumentation
+RUN curl -L -O https://artifacts.elastic.co/downloads/beats/auditbeat/auditbeat-7.9.3-amd64.deb
+RUN dpkg -i auditbeat-7.9.3-amd64.deb
+RUN cp logs-and-metrics/auditbeat/auditbeat.yml /etc/auditbeat
+
 # App instrumentation
 RUN mvn clean package -DskipTests
 ENV AGENT_VERSION=1.18.1
