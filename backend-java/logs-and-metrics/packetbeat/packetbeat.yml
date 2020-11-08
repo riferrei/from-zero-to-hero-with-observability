@@ -21,7 +21,7 @@ packetbeat.protocols:
   ports: [53]
 
 - type: http
-  ports: [80, 8080, 8888, 5000, 8002]
+  ports: [80, 8080, 8888, 3000, 8002]
 
 - type: memcache
   ports: [11211]
