@@ -1,20 +1,18 @@
-# Backend Estimator
-backend-estimator/backend-estimator.log
-backend-estimator/backend-estimator.log.json
-backend-estimator/target
-backend-estimator/.vscode
-backend-estimator/.settings
-backend-estimator/.project
-backend-estimator/.classpath
+# Backend Golang
+backend-golang/backend-golang
+backend-golang/backend-golang.json
+backend-golang/go.sum
+backend-golang/.vscode
+backend-golang/.settings
 
-# Backend Database
-backend-database/backend-database.log
-backend-database/backend-database.log.json
-backend-database/target
-backend-database/.vscode
-backend-database/.settings
-backend-database/.project
-backend-database/.classpath
+# Backend Java
+backend-java/backend-database.log
+backend-java/backend-database.log.json
+backend-java/target
+backend-java/.vscode
+backend-java/.settings
+backend-java/.project
+backend-java/.classpath
 
 # Frontend React
 frontend-react/node_modules/*
