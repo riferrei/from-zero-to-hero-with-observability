@@ -65,36 +65,36 @@ public class CarController {
     }
 
     @RequestMapping(method=RequestMethod.PUT, value="/api/cars/{id}")
-    public Car update(@PathVariable Long id, @RequestBody Car Car) {
+    public Car update(@PathVariable Long id, @RequestBody Car car) {
 
         logger.debug("In PUT by id");
-
         Optional<Car> optCar = carRepository.findById(id);
-        Car car = optCar.get();
-        if(Car.getBrand() != null)
-            car.setBrand(Car.getBrand());
-        if(Car.getModel() != null)
-            car.setModel(Car.getModel());
-        if(Car.getColor() != null)
-            car.setColor(Car.getColor());
-        if(Car.getYear() != 0)
-            car.setYear(Car.getYear());
-        if(Car.getPrice() != 0)
-            car.setPrice(Car.getPrice());
+        Car updatedCar = optCar.get();
+
+        if(car.getBrand() != null)
+            updatedCar.setBrand(car.getBrand());
+        if(car.getModel() != null)
+            updatedCar.setModel(car.getModel());
+        if(car.getColor() != null)
+            updatedCar.setColor(car.getColor());
+        if(car.getYear() != 0)
+            updatedCar.setYear(car.getYear());
+        if(car.getPrice() != 0)
+            updatedCar.setPrice(car.getPrice());
 
         UriComponentsBuilder builder = UriComponentsBuilder.fromUriString(estimatorEndpoint)
-                .queryParam("brand", car.getBrand())
-                .queryParam("model", car.getModel())
-                .queryParam("year", car.getYear());
+                .queryParam("brand", updatedCar.getBrand())
+                .queryParam("model", updatedCar.getModel())
+                .queryParam("year", updatedCar.getYear());
 
         logger.debug(builder.build().toString());
         RestTemplate restTemplate = new RestTemplate();
         MarketEstimate carEstimate = restTemplate.getForObject(builder.build().toString(), MarketEstimate.class);
         logger.debug(carEstimate.toString());
-        car.setMarketEstimate(carEstimate.getEstimate());
+        updatedCar.setMarketEstimate(carEstimate.getEstimate());
 
-        carRepository.save(car);
-        return car;
+        carRepository.save(updatedCar);
+        return updatedCar;
 
     }
 
