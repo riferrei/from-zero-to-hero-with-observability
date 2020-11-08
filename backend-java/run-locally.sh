@@ -16,7 +16,7 @@ java -javaagent:./${AGENT_FILE} \
 -Delastic.apm.server_urls="${ELASTIC_APM_SERVER_URL}" \
 -Delastic.apm.secret_token="${ELASTIC_APM_SECRET_TOKEN}" \
 -Delastic.apm.service_name="backend-java" \
--Delastic.apm.application_packages="com.riferrei.database" \
+-Delastic.apm.application_packages="com.riferrei.backend" \
 -Delastic.apm.profiling_inferred_spans_enabled=true \
 -Delastic.apm.enable_log_correlation=true \
 -DESTIMATOR_ENDPOINT=http://localhost:8888/estimateValue \

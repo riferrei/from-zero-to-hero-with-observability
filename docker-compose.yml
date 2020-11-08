@@ -38,7 +38,7 @@ services:
     environment:
       - ELASTIC_APM_SERVICE_NAME=backend-java
       - ELASTIC_APM_SERVER_URL=http://apm-server:8200
-      - ELASTIC_APM_APPLICATION_PACKAGES=com.riferrei.database.*
+      - ELASTIC_APM_APPLICATION_PACKAGES=com.riferrei.backend.*
       - ELASTIC_APM_PROFILING_INFERRED_SPANS_ENABLED=true
       - ELASTIC_APM_ENABLE_LOG_CORRELATION=true
       - ESTIMATOR_ENDPOINT=http://backend-golang:8888/estimateValue
