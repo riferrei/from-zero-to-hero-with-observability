@@ -5,8 +5,12 @@ services:
   frontend-react:
     build: ./frontend-react
     image: frontend-react:latest
+    cap_add:
+      - AUDIT_CONTROL
+      - AUDIT_READ
     container_name: frontend-react
     hostname: frontend-react
+    pid: host
     ports:
       - "3000:3000"
     networks:
