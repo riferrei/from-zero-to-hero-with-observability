@@ -2,10 +2,10 @@ package com.riferrei.backend.domain;
 
 public class MarketEstimate {
 
-    private  int estimate = 0;
-    private  String brand;
-    private  String model;
-    private  int year;
+    private int estimate = 0;
+    private String brand;
+    private String model;
+    private int year;
 
     public MarketEstimate() {
 
@@ -54,4 +54,5 @@ public class MarketEstimate {
     public void setYear(int year) {
         this.year = year;
     }
+    
 }
