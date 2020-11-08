@@ -6,8 +6,9 @@ backend-golang/.vscode
 backend-golang/.settings
 
 # Backend Java
-backend-java/backend-database.log
-backend-java/backend-database.log.json
+backend-java/backend-java.log
+backend-java/backend-java.log.json
+backend-java/*.jar
 backend-java/target
 backend-java/.vscode
 backend-java/.settings
