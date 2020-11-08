@@ -1,0 +1,28 @@
+heartbeat.config.monitors:
+  path: ${path.config}/monitors.d/*.yml
+  reload.enabled: false
+  reload.period: 5s
+
+heartbeat.monitors:
+- type: http
+  id: backend-golang
+  name: Backend Golang
+  urls: ["http://backend-golang:8888/checkStatus"]
+  schedule: '@every 5s'
+
+setup.template.settings:
+  index.number_of_shards: 1
+  index.codec: best_compression
+
+setup.kibana:
+
+  host: "kibana:5601"
+
+output.elasticsearch:
+  hosts: ["elasticsearch:9200"]
+
+processors:
+  - add_observer_metadata:
+      geo:
+        name: us-east
+        location: "37.926868, -78.024902"
