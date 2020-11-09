@@ -20,8 +20,8 @@ public class CarController {
 
     final static Logger logger = LoggerFactory.getLogger(CarController.class);
 
-    @Value("${estimator.endpoint}")
-    private String estimatorEndpoint;
+    @Value("${estimator.url}")
+    private String estimatorUrl;
 
     @Autowired
     CarRepository carRepository;
@@ -42,7 +42,8 @@ public class CarController {
 
         logger.debug("In POST add");
 
-        UriComponentsBuilder builder = UriComponentsBuilder.fromUriString(estimatorEndpoint)
+        UriComponentsBuilder builder = UriComponentsBuilder.fromUriString(estimatorUrl)
+            .path("/estimateValue")
             .queryParam("brand", car.getBrand())
             .queryParam("model", car.getModel())
             .queryParam("year", car.getYear());
@@ -82,10 +83,11 @@ public class CarController {
         if(car.getPrice() != 0)
             updatedCar.setPrice(car.getPrice());
 
-        UriComponentsBuilder builder = UriComponentsBuilder.fromUriString(estimatorEndpoint)
-                .queryParam("brand", updatedCar.getBrand())
-                .queryParam("model", updatedCar.getModel())
-                .queryParam("year", updatedCar.getYear());
+        UriComponentsBuilder builder = UriComponentsBuilder.fromUriString(estimatorUrl)
+            .path("/estimateValue")
+            .queryParam("brand", updatedCar.getBrand())
+            .queryParam("model", updatedCar.getModel())
+            .queryParam("year", updatedCar.getYear());
 
         logger.debug(builder.build().toString());
         RestTemplate restTemplate = new RestTemplate();

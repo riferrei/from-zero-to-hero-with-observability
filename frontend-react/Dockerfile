@@ -29,9 +29,8 @@ RUN curl -L -O https://artifacts.elastic.co/downloads/beats/auditbeat/auditbeat-
 RUN dpkg -i auditbeat-7.9.3-amd64.deb
 RUN cp logs-and-metrics/auditbeat/auditbeat.yml /etc/auditbeat
 
-RUN npm install --unsafe-perm \
-    && npm run-script build
 RUN sh install-pkgs.sh
+RUN npm install --unsafe-perm && npm run-script build
 
 RUN ["chmod", "+x", "/usr/src/app/entrypoint.sh"]
 ENTRYPOINT [ "/usr/src/app/entrypoint.sh" ]

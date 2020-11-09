@@ -45,7 +45,7 @@ services:
       - ELASTIC_APM_APPLICATION_PACKAGES=com.riferrei.backend.*
       - ELASTIC_APM_PROFILING_INFERRED_SPANS_ENABLED=true
       - ELASTIC_APM_ENABLE_LOG_CORRELATION=true
-      - ESTIMATOR_ENDPOINT=http://backend-golang:8888/estimateValue
+      - ESTIMATOR_URL=http://backend-golang:8888
     healthcheck:
       interval: 10s
       retries: 100

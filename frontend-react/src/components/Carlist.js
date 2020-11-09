@@ -1,6 +1,6 @@
 import apm from '../rum'
 import React, { Component } from 'react';
-import { SERVER_URL } from '../constants.js'
+import { BACKEND_URL } from '../constants.js'
 import ReactTable from "react-table";
 import 'react-table/react-table.css';
 import { confirmAlert } from 'react-confirm-alert';
@@ -21,7 +21,7 @@ class Carlist extends Component {
         console.log("Before Add Car Start Transaction")
         apm.startTransaction("Add Car", "Car", { managed: true });
 
-        fetch(SERVER_URL + 'api/cars',
+        fetch(BACKEND_URL + '/api/cars',
         {
                 method: 'POST',
                 headers: {
@@ -54,7 +54,7 @@ class Carlist extends Component {
 
     // Delete car
     onDelClick = (car) => {
-        fetch( SERVER_URL + 'api/cars/' + car.id, { method: 'DELETE' })
+        fetch( BACKEND_URL + '/api/cars/' + car.id, { method: 'DELETE' })
             .then(res => {
                 this.setState({ open: true, message: 'Car deleted' });
                 this.fetchCars();
@@ -67,7 +67,7 @@ class Carlist extends Component {
 
     // Update car
     updateCar(car) {
-        fetch(SERVER_URL + 'api/cars/' + car.id,
+        fetch(BACKEND_URL + '/api/cars/' + car.id,
             {
                 method: 'PUT',
                 headers: {
@@ -88,7 +88,7 @@ class Carlist extends Component {
     }
 
     fetchCars = () => {
-        fetch(SERVER_URL + 'api/cars')
+        fetch(BACKEND_URL + '/api/cars')
             .then((response) => response.json())
             .then((responseData) => {
                 this.setState({

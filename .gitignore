@@ -7,7 +7,7 @@ backend-golang/.settings
 
 # Backend Java
 backend-java/backend-java.log
-backend-java/backend-java.log.json
+backend-java/backend-java.log.*
 backend-java/*.jar
 backend-java/target
 backend-java/.vscode
