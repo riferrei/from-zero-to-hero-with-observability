@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"log"
 	"math/rand"
 	"net/http"
@@ -12,13 +13,12 @@ import (
 	"strings"
 	"time"
 
-	"github.com/go-redis/redis"
-
+	"github.com/gomodule/redigo/redis"
 	"github.com/gorilla/mux"
 	"github.com/opentracing/opentracing-go"
-	"go.elastic.co/apm/module/apmgoredis"
 	"go.elastic.co/apm/module/apmgorilla"
 	"go.elastic.co/apm/module/apmot"
+	"go.elastic.co/apm/module/apmredigo"
 	"go.elastic.co/ecszap"
 	"go.uber.org/zap"
 )
@@ -30,20 +30,21 @@ const (
 )
 
 var (
-	redisClient apmgoredis.Client
-	logger      *zap.Logger
+	redisPool *redis.Pool
+	logger    *zap.Logger
 )
 
 func main() {
 
-	// Initialize connection with Redis
+	// Create a Redis connection pool
 	redisURL := os.Getenv("REDIS_URL")
-	nativeClient := redis.NewClient(&redis.Options{
-		Addr: redisURL,
-	})
-	context := context.Background()
-	redisClient = apmgoredis.Wrap(nativeClient).WithContext(context)
-	defer redisClient.Close()
+	redisPool = &redis.Pool{
+		MaxIdle:     5,
+		IdleTimeout: 300 * time.Second,
+		Dial: func() (redis.Conn, error) {
+			return redis.Dial("tcp", redisURL)
+		},
+	}
 
 	// Create a logger based on Elastic ECS
 	encoderConfig := ecszap.NewDefaultEncoderConfig()
@@ -80,7 +81,6 @@ func estimateValue(writer http.ResponseWriter, request *http.Request) {
 		err := errors.New("Parameter 'brand' was not provided")
 		logger.Error("No brand", zap.Error(err),
 			zap.String("event.dataset", eventDataset))
-		panic(err)
 	}
 	var model string
 	if len(queryParams["model"]) == 1 {
@@ -89,7 +89,6 @@ func estimateValue(writer http.ResponseWriter, request *http.Request) {
 		err := errors.New("Parameter 'model' was not provided")
 		logger.Error("No model", zap.Error(err),
 			zap.String("event.dataset", eventDataset))
-		panic(err)
 	}
 	var year int
 	if len(queryParams["year"]) == 1 {
@@ -112,7 +111,8 @@ func estimateValue(writer http.ResponseWriter, request *http.Request) {
 
 	bytes, err := json.Marshal(estimate)
 	if err != nil {
-		panic(err)
+		logger.Error("Error marshaling JSON response", zap.Error(err),
+			zap.String("event.dataset", eventDataset))
 	}
 	writer.Header().Add("Content-Type", "application/json")
 	writer.Write(bytes)
@@ -131,20 +131,32 @@ func calculateEstimate(ctx context.Context, brand string, model string, year int
 	}
 
 	brand = strings.ToLower(brand)
-	tmpClient := redisClient.WithContext(ctx)
 
 	// Retrieve the base price for the car
-	value, err := tmpClient.Get(brand).Result()
-	if err == redis.Nil {
-		value, _ = tmpClient.Get(basePriceDefault).Result()
+	redisConn := apmredigo.Wrap(redisPool.Get()).WithContext(ctx)
+	defer redisConn.Close()
+	basePrice, err := redis.Int(redisConn.Do("GET", brand))
+	if err != nil {
+		logger.Error(fmt.Sprintf("Error getting base price for '%s'", brand),
+			zap.Error(err), zap.String("event.dataset", eventDataset))
 	}
-	basePrice, _ := strconv.Atoi(value)
+	if basePrice == 0 {
+		basePrice, err = redis.Int(redisConn.Do("GET", basePriceDefault))
+		if err != nil {
+			logger.Error("Error getting base price default", zap.Error(err),
+				zap.String("event.dataset", eventDataset))
+		}
+	}
 
 	// Calculate mark up of 5% on top of the base price
 	markUp := int(((float64(5) * float64(basePrice)) / float64(100)))
 
 	// Exotic cars have an additional markup
-	isExotic, _ := tmpClient.SIsMember(exoticCars, brand).Result()
+	isExotic, err := redis.Bool(redisConn.Do("SISMEMBER", exoticCars, brand))
+	if err != nil {
+		logger.Error(fmt.Sprintf("Error checking if '%s' is exotic", brand),
+			zap.Error(err), zap.String("event.dataset", eventDataset))
+	}
 	if isExotic {
 		markUp += additionalMarkUp()
 	}
