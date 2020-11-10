@@ -18,6 +18,8 @@ services:
     depends_on:
       backend-java:
         condition: service_healthy
+      apm-server:
+        condition: service_healthy
     healthcheck:
       interval: 10s
       retries: 100
@@ -38,6 +40,8 @@ services:
       - elastic
     depends_on:
       backend-golang:
+        condition: service_healthy
+      apm-server:
         condition: service_healthy
     environment:
       - ELASTIC_APM_SERVICE_NAME=backend-java
@@ -65,15 +69,37 @@ services:
     networks:
       - elastic
     depends_on:
+      redis-server:
+        condition: service_healthy
       apm-server:
         condition: service_healthy
     environment:
       - ELASTIC_APM_SERVICE_NAME=backend-golang
       - ELASTIC_APM_SERVER_URL=http://apm-server:8200
+      - REDIS_URL=redis-server:6379
     healthcheck:
       interval: 10s
       retries: 100
       test: curl --write-out 'HTTP %{http_code}' --fail --silent --output /dev/null http://localhost:8888/checkStatus
+
+  redis-server:
+    image: redis:latest
+    container_name: redis-server
+    hostname: redis-server
+    volumes:
+    - ./redis-data/dump.rdb:/data/dump.rdb
+    ports:
+      - 6379:6379
+    networks:
+    - elastic
+    logging:
+      driver: 'json-file'
+      options:
+        max-size: '2m'
+        max-file: '5'
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
 
   apm-server:
     image: docker.elastic.co/apm/apm-server:7.9.3

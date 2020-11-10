@@ -9,21 +9,45 @@ import (
 	"net/http"
 	"os"
 	"strconv"
+	"strings"
 	"time"
+
+	"github.com/go-redis/redis"
 
 	"github.com/gorilla/mux"
 	"github.com/opentracing/opentracing-go"
+	"go.elastic.co/apm/module/apmgoredis"
 	"go.elastic.co/apm/module/apmgorilla"
 	"go.elastic.co/apm/module/apmot"
 	"go.elastic.co/ecszap"
 	"go.uber.org/zap"
 )
 
-const eventDataset string = "backend-golang.log"
+const (
+	eventDataset     string = "backend-golang.log"
+	basePriceDefault string = "basePriceDefault"
+)
 
-var logger *zap.Logger
+var (
+	redisClient apmgoredis.Client
+	logger      *zap.Logger
+	specialCars = []string{
+		"ferrari", "mclaren",
+		"lamborghini", "mercedes",
+		"koenigsegg", "bugatti",
+	}
+)
 
 func main() {
+
+	// Initialize connection with Redis
+	redisURL := os.Getenv("REDIS_URL")
+	nativeClient := redis.NewClient(&redis.Options{
+		Addr: redisURL,
+	})
+	context := context.Background()
+	redisClient = apmgoredis.Wrap(nativeClient).WithContext(context)
+	defer redisClient.Close()
 
 	// Create a logger based on Elastic ECS
 	encoderConfig := ecszap.NewDefaultEncoderConfig()
@@ -79,8 +103,8 @@ func estimateValue(writer http.ResponseWriter, request *http.Request) {
 	calcEstSpan.SetTag("brand", brand)
 	calcEstSpan.SetTag("model", model)
 	calcEstSpan.SetTag("year", year)
-	defer calcEstSpan.Finish()
-	estimate = calculateEstimate(ctx, brand, model, year) // Function executed within the span
+	estimate = calculateEstimate(ctx, brand, model, year)
+	calcEstSpan.Finish()
 
 	bytes, err := json.Marshal(estimate)
 	if err != nil {
@@ -104,42 +128,50 @@ func calculateEstimate(ctx context.Context, brand string, model string, year int
 	logger.Info("Value estimation for brand: "+brand,
 		zap.String("event.dataset", eventDataset))
 
-	var basePrice int = 0
 	estimate := Estimate{
 		Brand: brand,
 		Model: model,
 		Year:  year,
 	}
 
-	switch brand {
-	case "Toyota":
-		basePrice = 25000
-	case "Lexus":
-		basePrice = 35000
-	case "Ford":
-		basePrice = 20000
-	case "Nissan":
-		basePrice = 20000
-	case "Tesla":
-		basePrice = 60000
-	case "Ferrari":
-		basePrice = specialPriceCalculation()
-	default:
-		basePrice = 30000
+	basePriceSpan, ctx := opentracing.StartSpanFromContext(ctx, "getBasePrice")
+	brand = strings.ToLower(brand)
+	basePrice := getBasePrice(ctx, brand)
+	basePriceSpan.Finish()
+
+	markUp := int(((float64(5) * float64(basePrice)) / float64(100)))
+	// Special cars have an additional markup based on market data
+	for _, specialCar := range specialCars {
+		if specialCar == brand {
+			markUp += additionalMarkUp()
+			break
+		}
 	}
 
-	estimate.Estimate = ((rand.Intn(50) - 5) + 1) * basePrice
+	estimate.Estimate = basePrice + markUp
 	return estimate
 
 }
 
-func specialPriceCalculation() int {
-	logger.Debug("Calculating special price for exotic car...",
+func getBasePrice(ctx context.Context, brand string) int {
+
+	var basePrice int = 0
+
+	tmpClient := redisClient.WithContext(ctx)
+	value, err := tmpClient.Get(brand).Result()
+	if err == redis.Nil {
+		value, _ = tmpClient.Get(basePriceDefault).Result()
+	}
+	basePrice, _ = strconv.Atoi(value)
+	return basePrice
+
+}
+
+func additionalMarkUp() int {
+	logger.Debug("Use market data for additional mark up",
 		zap.String("event.dataset", eventDataset))
 	time.Sleep(5 * time.Second)
-	logger.Debug("Use market data with a fixed base price",
-		zap.String("event.dataset", eventDataset))
-	return rand.Intn(10) * 100000
+	return rand.Intn(3) * 10000
 }
 
 // Status struct
