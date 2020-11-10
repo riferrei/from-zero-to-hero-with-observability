@@ -25,17 +25,13 @@ import (
 
 const (
 	eventDataset     string = "backend-golang.log"
-	basePriceDefault string = "basePriceDefault"
+	basePriceDefault string = "base-price-default"
+	exoticCars       string = "exotic-cars"
 )
 
 var (
 	redisClient apmgoredis.Client
 	logger      *zap.Logger
-	specialCars = []string{
-		"ferrari", "mclaren",
-		"lamborghini", "mercedes",
-		"koenigsegg", "bugatti",
-	}
 )
 
 func main() {
@@ -63,6 +59,14 @@ func main() {
 	// Open the microservice for business...
 	log.Fatal(http.ListenAndServe(":8888", router))
 
+}
+
+// Estimate struct
+type Estimate struct {
+	Estimate int    `json:"estimate"`
+	Brand    string `json:"brand"`
+	Model    string `json:"model"`
+	Year     int    `json:"year"`
 }
 
 func estimateValue(writer http.ResponseWriter, request *http.Request) {
@@ -115,14 +119,6 @@ func estimateValue(writer http.ResponseWriter, request *http.Request) {
 
 }
 
-// Estimate struct
-type Estimate struct {
-	Estimate int    `json:"estimate"`
-	Brand    string `json:"brand"`
-	Model    string `json:"model"`
-	Year     int    `json:"year"`
-}
-
 func calculateEstimate(ctx context.Context, brand string, model string, year int) Estimate {
 
 	logger.Info("Value estimation for brand: "+brand,
@@ -134,18 +130,23 @@ func calculateEstimate(ctx context.Context, brand string, model string, year int
 		Year:  year,
 	}
 
-	basePriceSpan, ctx := opentracing.StartSpanFromContext(ctx, "getBasePrice")
 	brand = strings.ToLower(brand)
-	basePrice := getBasePrice(ctx, brand)
-	basePriceSpan.Finish()
+	tmpClient := redisClient.WithContext(ctx)
 
+	// Retrieve the base price for the car
+	value, err := tmpClient.Get(brand).Result()
+	if err == redis.Nil {
+		value, _ = tmpClient.Get(basePriceDefault).Result()
+	}
+	basePrice, _ := strconv.Atoi(value)
+
+	// Calculate mark up of 5% on top of the base price
 	markUp := int(((float64(5) * float64(basePrice)) / float64(100)))
-	// Special cars have an additional markup based on market data
-	for _, specialCar := range specialCars {
-		if specialCar == brand {
-			markUp += additionalMarkUp()
-			break
-		}
+
+	// Exotic cars have an additional markup
+	isExotic, _ := tmpClient.SIsMember(exoticCars, brand).Result()
+	if isExotic {
+		markUp += additionalMarkUp()
 	}
 
 	estimate.Estimate = basePrice + markUp
@@ -153,22 +154,8 @@ func calculateEstimate(ctx context.Context, brand string, model string, year int
 
 }
 
-func getBasePrice(ctx context.Context, brand string) int {
-
-	var basePrice int = 0
-
-	tmpClient := redisClient.WithContext(ctx)
-	value, err := tmpClient.Get(brand).Result()
-	if err == redis.Nil {
-		value, _ = tmpClient.Get(basePriceDefault).Result()
-	}
-	basePrice, _ = strconv.Atoi(value)
-	return basePrice
-
-}
-
 func additionalMarkUp() int {
-	logger.Debug("Use market data for additional mark up",
+	logger.Debug("Waiting for the market data...",
 		zap.String("event.dataset", eventDataset))
 	time.Sleep(5 * time.Second)
 	return rand.Intn(3) * 10000
