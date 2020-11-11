@@ -97,7 +97,6 @@ func estimateValue(writer http.ResponseWriter, request *http.Request) {
 		err := errors.New("Parameter 'year' was not provided")
 		logger.Error("No year", zap.Error(err),
 			zap.String("event.dataset", eventDataset))
-		panic(err)
 	}
 
 	var estimate Estimate
