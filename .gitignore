@@ -17,3 +17,6 @@ backend-java/.classpath
 
 # Frontend React
 frontend-react/node_modules/*
+
+# General
+from-zero-to-hero.code-workspace
