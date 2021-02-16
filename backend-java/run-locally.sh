@@ -7,7 +7,7 @@ export ESTIMATOR_URL=
 
 mvn clean package -Dmaven.test.skip=true
 
-AGENT_VERSION=1.18.1
+AGENT_VERSION=1.21.0
 AGENT_FILE=elastic-apm-agent-${AGENT_VERSION}.jar
 if [ ! -f "${AGENT_FILE}" ]; then
   curl -O  https://repo1.maven.org/maven2/co/elastic/apm/elastic-apm-agent/${AGENT_VERSION}/elastic-apm-agent-${AGENT_VERSION}.jar

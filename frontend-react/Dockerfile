@@ -5,7 +5,7 @@ ENV PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true
 WORKDIR /usr/src/app
 COPY . /usr/src/app
 
-ENV BEATS_VERSION=7.10.0
+ENV BEATS_VERSION=7.11.0
 
 # Metric instrumentation
 RUN curl -L -O https://artifacts.elastic.co/downloads/beats/metricbeat/metricbeat-$BEATS_VERSION-amd64.deb

@@ -4,7 +4,7 @@ VOLUME /tmp
 ADD . /usr/src/app
 WORKDIR /usr/src/app
 
-ENV BEATS_VERSION=7.10.0
+ENV BEATS_VERSION=7.11.0
 
 # Log instrumentation
 RUN curl -L -O https://artifacts.elastic.co/downloads/beats/filebeat/filebeat-$BEATS_VERSION-amd64.deb
@@ -39,7 +39,7 @@ RUN cp logs-and-metrics/auditbeat/auditbeat.yml /etc/auditbeat
 
 # App instrumentation
 RUN mvn clean package -DskipTests
-ENV AGENT_VERSION=1.19.0
+ENV AGENT_VERSION=1.21.0
 RUN curl -O https://repo1.maven.org/maven2/co/elastic/apm/elastic-apm-agent/$AGENT_VERSION/elastic-apm-agent-$AGENT_VERSION.jar
 RUN mv elastic-apm-agent-$AGENT_VERSION.jar elastic-apm-agent.jar
 

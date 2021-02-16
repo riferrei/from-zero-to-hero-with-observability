@@ -4,7 +4,7 @@ VOLUME /tmp
 ADD . /usr/src/app
 WORKDIR /usr/src/app
 
-ENV BEATS_VERSION=7.10.0
+ENV BEATS_VERSION=7.11.0
 
 # Log instrumentation
 RUN curl -L -O https://artifacts.elastic.co/downloads/beats/filebeat/filebeat-$BEATS_VERSION-amd64.deb
