@@ -2,86 +2,6 @@ version: '3.0'
 
 services:
 
-  frontend-react:
-    build: ./frontend-react
-    image: frontend-react:latest
-    cap_add:
-      - AUDIT_CONTROL
-      - AUDIT_READ
-    container_name: frontend-react
-    hostname: frontend-react
-    pid: host
-    ports:
-      - "3000:3000"
-    networks:
-      - elastic
-    depends_on:
-      backend-java:
-        condition: service_healthy
-      apm-server:
-        condition: service_healthy
-    healthcheck:
-      interval: 10s
-      retries: 100
-      test: curl --write-out 'HTTP %{http_code}' --fail --silent --output /dev/null http://localhost:3000
-      
-  backend-java:
-    build: ./backend-java
-    image: backend-java:latest
-    cap_add:
-      - AUDIT_CONTROL
-      - AUDIT_READ
-    container_name: backend-java
-    hostname: backend-java
-    pid: host
-    ports:
-      - "8080:8080"
-    networks:
-      - elastic
-    depends_on:
-      backend-golang:
-        condition: service_healthy
-      apm-server:
-        condition: service_healthy
-    environment:
-      - ELASTIC_APM_SERVICE_NAME=backend-java
-      - ELASTIC_APM_SERVER_URL=http://apm-server:8200
-      - ELASTIC_APM_APPLICATION_PACKAGES=com.riferrei.backend.*
-      - ELASTIC_APM_PROFILING_INFERRED_SPANS_ENABLED=true
-      - ELASTIC_APM_ENABLE_LOG_CORRELATION=true
-      - ESTIMATOR_URL=http://backend-golang:8888
-    healthcheck:
-      interval: 10s
-      retries: 100
-      test: curl --write-out 'HTTP %{http_code}' --fail --silent --output /dev/null http://localhost:8080/actuator/health
-
-  backend-golang:
-    build: ./backend-golang
-    image: backend-golang:latest
-    cap_add:
-      - AUDIT_CONTROL
-      - AUDIT_READ
-    container_name: backend-golang
-    hostname: backend-golang
-    pid: host
-    ports:
-      - "8888:8888"
-    networks:
-      - elastic
-    depends_on:
-      redis-server:
-        condition: service_healthy
-      apm-server:
-        condition: service_healthy
-    environment:
-      - ELASTIC_APM_SERVICE_NAME=backend-golang
-      - ELASTIC_APM_SERVER_URL=http://apm-server:8200
-      - REDIS_URL=redis-server:6379
-    healthcheck:
-      interval: 10s
-      retries: 100
-      test: curl --write-out 'HTTP %{http_code}' --fail --silent --output /dev/null http://localhost:8888/checkStatus
-
   redis-server:
     image: redis:latest
     container_name: redis-server
@@ -99,11 +19,12 @@ services:
         max-file: '5'
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
-      interval: 10s
+      interval: 10s  
 
   apm-server:
-    image: docker.elastic.co/apm/apm-server:7.11.0
+    image: docker.elastic.co/apm/apm-server:7.12.0
     container_name: apm-server
+    hostname: apm-server
     depends_on:
       elasticsearch:
         condition: service_healthy
@@ -125,12 +46,13 @@ services:
          -E output.elasticsearch.hosts=["elasticsearch:9200"]
     healthcheck:
       interval: 10s
-      retries: 12
+      retries: 20
       test: curl --write-out 'HTTP %{http_code}' --fail --silent --output /dev/null http://localhost:8200/
 
   elasticsearch:
-    image: docker.elastic.co/elasticsearch/elasticsearch:7.11.0
+    image: docker.elastic.co/elasticsearch/elasticsearch:7.12.0
     container_name: elasticsearch
+    hostname: elasticsearch
     environment:
     - bootstrap.memory_lock=true
     - cluster.name=docker-cluster
@@ -148,13 +70,14 @@ services:
     networks:
     - elastic
     healthcheck:
-      interval: 20s
-      retries: 10
+      interval: 10s
+      retries: 20
       test: curl -s http://localhost:9200/_cluster/health | grep -vq '"status":"red"'
 
   kibana:
-    image: docker.elastic.co/kibana/kibana:7.11.0
+    image: docker.elastic.co/kibana/kibana:7.12.0
     container_name: kibana
+    hostname: kibana
     depends_on:
       elasticsearch:
         condition: service_healthy

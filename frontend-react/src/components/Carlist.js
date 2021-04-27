@@ -1,4 +1,3 @@
-import apm from '../rum'
 import React, { Component } from 'react';
 import { BACKEND_URL } from '../constants.js'
 import ReactTable from "react-table";
@@ -19,7 +18,6 @@ class Carlist extends Component {
     addCar(car) {
 
         console.log("Before Add Car Start Transaction")
-        apm.startTransaction("Add Car", "Car", { managed: true });
 
         fetch(BACKEND_URL + '/api/cars',
         {
@@ -97,8 +95,6 @@ class Carlist extends Component {
                 });
             })
             .catch(err => console.error(err));
-            console.log("Before End Transaction")
-            //apm.getCurrentTransaction().end()
     }
 
     generateError() {

@@ -3,17 +3,15 @@ module backend-golang
 go 1.15
 
 require (
-	github.com/elastic/go-sysinfo v1.4.0 // indirect
-	github.com/elastic/go-windows v1.0.1 // indirect
-	github.com/gomodule/redigo v1.8.2
+	github.com/go-redis/redis/v8 v8.8.2
+	github.com/gomodule/redigo v1.8.4
 	github.com/gorilla/mux v1.8.0
-	github.com/opentracing/opentracing-go v1.2.0
-	github.com/prometheus/procfs v0.2.0 // indirect
-	go.elastic.co/apm/module/apmgorilla v1.9.0
-	go.elastic.co/apm/module/apmot v1.9.0
-	go.elastic.co/apm/module/apmredigo v1.9.0
-	go.elastic.co/ecszap v0.3.0
-	go.uber.org/zap v1.16.0
-	golang.org/x/sys v0.0.0-20201109165425-215b40eba54c // indirect
-	howett.net/plist v0.0.0-20201026045517-117a925f2150 // indirect
+	github.com/kr/pretty v0.1.0 // indirect
+	go.opentelemetry.io/contrib/instrumentation/github.com/gorilla/mux/otelmux v0.20.0
+	go.opentelemetry.io/otel v0.20.0
+	go.opentelemetry.io/otel/exporters/otlp v0.20.0
+	go.opentelemetry.io/otel/metric v0.20.0
+	go.opentelemetry.io/otel/sdk v0.20.0
+	go.opentelemetry.io/otel/sdk/metric v0.20.0
+	gopkg.in/check.v1 v1.0.0-20180628173108-788fd7840127 // indirect
 )

@@ -1,9 +1,7 @@
 #!/bin/bash
 # set -x
 
-export ELASTIC_APM_SERVER_URL=
-export ELASTIC_APM_SECRET_TOKEN=
-export REDIS_URL=
+export REDIS_URL=localhost:6379
+export EXPORTER_ENDPOINT=localhost:8200
 
-go build -o backend-golang
-./backend-golang >> backend-golang.json
+go run main.go

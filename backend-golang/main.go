@@ -3,8 +3,6 @@ package main
 import (
 	"context"
 	"encoding/json"
-	"errors"
-	"fmt"
 	"log"
 	"math/rand"
 	"net/http"
@@ -13,51 +11,98 @@ import (
 	"strings"
 	"time"
 
-	"github.com/gomodule/redigo/redis"
+	"github.com/go-redis/redis/v8"
 	"github.com/gorilla/mux"
-	"github.com/opentracing/opentracing-go"
-	"go.elastic.co/apm/module/apmgorilla"
-	"go.elastic.co/apm/module/apmot"
-	"go.elastic.co/apm/module/apmredigo"
-	"go.elastic.co/ecszap"
-	"go.uber.org/zap"
+	"go.opentelemetry.io/contrib/instrumentation/github.com/gorilla/mux/otelmux"
+	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/exporters/otlp"
+	"go.opentelemetry.io/otel/exporters/otlp/otlpgrpc"
+	"go.opentelemetry.io/otel/metric/global"
+	"go.opentelemetry.io/otel/propagation"
+	controller "go.opentelemetry.io/otel/sdk/metric/controller/basic"
+	processor "go.opentelemetry.io/otel/sdk/metric/processor/basic"
+	"go.opentelemetry.io/otel/sdk/metric/selector/simple"
+	"go.opentelemetry.io/otel/sdk/resource"
+	sdktrace "go.opentelemetry.io/otel/sdk/trace"
+	"go.opentelemetry.io/otel/semconv"
 )
 
 const (
-	eventDataset     string = "backend-golang.log"
+	serviceName             = "backend-golang"
 	basePriceDefault string = "base-price-default"
 	exoticCars       string = "exotic-cars"
 )
 
 var (
-	redisPool *redis.Pool
-	logger    *zap.Logger
+	redisClient *redis.Client
 )
 
 func main() {
 
-	// Create a Redis connection pool
-	redisURL := os.Getenv("REDIS_URL")
-	redisPool = &redis.Pool{
-		MaxIdle:     5,
-		IdleTimeout: 300 * time.Second,
-		Dial: func() (redis.Conn, error) {
-			return redis.Dial("tcp", redisURL)
-		},
+	// OpenTelemetry configuration
+
+	ctx := context.Background()
+
+	endpoint := os.Getenv("EXPORTER_ENDPOINT")
+	driver := otlpgrpc.NewDriver(
+		otlpgrpc.WithInsecure(),
+		otlpgrpc.WithEndpoint(endpoint),
+	)
+	exporter, err := otlp.NewExporter(ctx, driver)
+	if err != nil {
+		log.Fatalf("%s: %v", "failed to create exporter", err)
 	}
 
-	// Create a logger based on Elastic ECS
-	encoderConfig := ecszap.NewDefaultEncoderConfig()
-	core := ecszap.NewCore(encoderConfig, os.Stdout, zap.DebugLevel)
-	logger = zap.New(core, zap.AddCaller())
+	res0urce, err := resource.New(ctx,
+		resource.WithAttributes(
+			semconv.ServiceNameKey.String(serviceName),
+			semconv.ServiceVersionKey.String("1.0"),
+		),
+	)
+
+	bsp := sdktrace.NewBatchSpanProcessor(exporter)
+	tracerProvider := sdktrace.NewTracerProvider(
+		sdktrace.WithSampler(sdktrace.AlwaysSample()),
+		sdktrace.WithResource(res0urce),
+		sdktrace.WithSpanProcessor(bsp),
+	)
+
+	pusher := controller.New(
+		processor.New(
+			simple.NewWithExactDistribution(),
+			exporter,
+		),
+		controller.WithExporter(exporter),
+		controller.WithCollectPeriod(2*time.Second),
+	)
+	err = pusher.Start(ctx)
+	if err != nil {
+		log.Fatalf("%s: %v", "failed to start the controller", err)
+	}
+	defer func() { _ = pusher.Stop(ctx) }()
+
+	otel.SetTracerProvider(tracerProvider)
+	global.SetMeterProvider(pusher.MeterProvider())
+	otel.SetTextMapPropagator(propagation.NewCompositeTextMapPropagator(
+		propagation.Baggage{},
+		propagation.TraceContext{}),
+	)
+
+	// Redis configuration
+
+	redisURL := os.Getenv("REDIS_URL")
+	redisClient = redis.NewClient(&redis.Options{
+		Addr: redisURL,
+	})
+	defer redisClient.Close()
+
+	// REST API configuration
 
 	router := mux.NewRouter()
 	router.HandleFunc("/checkStatus", checkStatus)
 	router.HandleFunc("/estimateValue", estimateValue)
-	// Configure the Elastic APM and OpenTracing
-	router.Use(apmgorilla.Middleware())
-	opentracing.SetGlobalTracer(apmot.New())
-	// Open the microservice for business...
+	router.Use(otelmux.Middleware(serviceName))
 	log.Fatal(http.ListenAndServe(":8888", router))
 
 }
@@ -77,42 +122,28 @@ func estimateValue(writer http.ResponseWriter, request *http.Request) {
 	var brand string
 	if len(queryParams["brand"]) == 1 {
 		brand = queryParams["brand"][0]
-	} else {
-		err := errors.New("Parameter 'brand' was not provided")
-		logger.Error("No brand", zap.Error(err),
-			zap.String("event.dataset", eventDataset))
 	}
 	var model string
 	if len(queryParams["model"]) == 1 {
 		model = queryParams["model"][0]
-	} else {
-		err := errors.New("Parameter 'model' was not provided")
-		logger.Error("No model", zap.Error(err),
-			zap.String("event.dataset", eventDataset))
 	}
 	var year int
 	if len(queryParams["year"]) == 1 {
 		year, _ = strconv.Atoi(queryParams["year"][0])
-	} else {
-		err := errors.New("Parameter 'year' was not provided")
-		logger.Error("No year", zap.Error(err),
-			zap.String("event.dataset", eventDataset))
 	}
 
 	var estimate Estimate
 
-	calcEstSpan, ctx := opentracing.StartSpanFromContext(request.Context(), "calculateEstimate")
-	calcEstSpan.SetTag("brand", brand)
-	calcEstSpan.SetTag("model", model)
-	calcEstSpan.SetTag("year", year)
+	tracer := otel.Tracer(serviceName)
+	ctx, span := tracer.Start(request.Context(), "calculateEstimate")
+	span.SetAttributes(
+		attribute.String("brand", brand),
+		attribute.String("model", model),
+		attribute.Int("year", year))
 	estimate = calculateEstimate(ctx, brand, model, year)
-	calcEstSpan.Finish()
+	defer span.End()
 
-	bytes, err := json.Marshal(estimate)
-	if err != nil {
-		logger.Error("Error marshaling JSON response", zap.Error(err),
-			zap.String("event.dataset", eventDataset))
-	}
+	bytes, _ := json.Marshal(estimate)
 	writer.Header().Add("Content-Type", "application/json")
 	writer.Write(bytes)
 
@@ -120,8 +151,7 @@ func estimateValue(writer http.ResponseWriter, request *http.Request) {
 
 func calculateEstimate(ctx context.Context, brand string, model string, year int) Estimate {
 
-	logger.Info("Value estimation for brand: "+brand,
-		zap.String("event.dataset", eventDataset))
+	tracer := otel.Tracer(serviceName)
 
 	estimate := Estimate{
 		Brand: brand,
@@ -132,30 +162,27 @@ func calculateEstimate(ctx context.Context, brand string, model string, year int
 	brand = strings.ToLower(brand)
 
 	// Retrieve the base price for the car
-	redisConn := apmredigo.Wrap(redisPool.Get()).WithContext(ctx)
-	defer redisConn.Close()
-	basePrice, err := redis.Int(redisConn.Do("GET", brand))
-	if err != nil {
-		logger.Error(fmt.Sprintf("Error getting base price for '%s'", brand),
-			zap.Error(err), zap.String("event.dataset", eventDataset))
-	}
-	if basePrice == 0 {
-		basePrice, err = redis.Int(redisConn.Do("GET", basePriceDefault))
-		if err != nil {
-			logger.Error("Error getting base price default", zap.Error(err),
-				zap.String("event.dataset", eventDataset))
-		}
+	spanCtx, redisGetSpan := tracer.Start(ctx, "Redis GET")
+	redisGetSpan.SetAttributes(attribute.String("brand", brand))
+	basePrice, _ := redisClient.Get(spanCtx, brand).Int()
+	redisGetSpan.End()
+
+	if basePrice == 0 { // Retrieve the base price then...
+		spanCtx, redisGetSpan = tracer.Start(ctx, "Redis GET")
+		redisGetSpan.SetAttributes(attribute.String("brand", brand))
+		basePrice, _ = redisClient.Get(spanCtx, basePriceDefault).Int()
+		redisGetSpan.End()
 	}
 
 	// Calculate mark up of 5% on top of the base price
 	markUp := int(((float64(5) * float64(basePrice)) / float64(100)))
 
 	// Exotic cars have an additional markup
-	isExotic, err := redis.Bool(redisConn.Do("SISMEMBER", exoticCars, brand))
-	if err != nil {
-		logger.Error(fmt.Sprintf("Error checking if '%s' is exotic", brand),
-			zap.Error(err), zap.String("event.dataset", eventDataset))
-	}
+	spanCtx, redisSisMemberSpan := tracer.Start(ctx, "Redis SISMEMBER")
+	redisSisMemberSpan.SetAttributes(attribute.String("brand", brand))
+	isExotic := redisClient.SIsMember(spanCtx, exoticCars, brand).Val()
+	redisSisMemberSpan.End()
+
 	if isExotic {
 		markUp += additionalMarkUp()
 	}
@@ -166,8 +193,6 @@ func calculateEstimate(ctx context.Context, brand string, model string, year int
 }
 
 func additionalMarkUp() int {
-	logger.Debug("Waiting for the market data...",
-		zap.String("event.dataset", eventDataset))
 	time.Sleep(5 * time.Second)
 	return rand.Intn(3) * 10000
 }
