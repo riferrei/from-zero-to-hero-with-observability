@@ -137,10 +137,6 @@ services:
     - cluster.routing.allocation.disk.threshold_enabled=false
     - discovery.type=single-node
     - ES_JAVA_OPTS=-XX:UseAVX=2 -Xms1g -Xmx1g
-    ulimits:
-      memlock:
-        hard: -1
-        soft: -1
     volumes:
     - esdata:/usr/share/elasticsearch/data
     ports:
