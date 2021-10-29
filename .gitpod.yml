@@ -1,0 +1,30 @@
+# List the start up tasks. Learn more https://www.gitpod.io/docs/config-start-tasks/
+tasks:
+  - init: docker-compose build && docker-compose pull # runs during prebuild
+    command: docker-compose up -d
+
+# List the ports to expose. Learn more https://www.gitpod.io/docs/config-ports/
+ports:
+  # CRUD application
+  - port: 3000
+  # Kibana UI
+  - port: 5601
+  - port: 1-2999
+    onOpen: ignore
+  - port: 5602-10000
+    onOpen: ignore
+
+
+# Enable prebuilds
+github:
+  prebuilds:
+    # enable for the default branch (defaults to true)
+    master: true
+    # enable for all branches in this repo (defaults to false)
+    branches: true
+    # enable for pull requests coming from this repo (defaults to true)
+    pullRequests: true
+    # add a "Review in Gitpod" button as a comment to pull requests (defaults to false)
+    addComment: true
+    # configure whether Gitpod registers itself as a status check to pull requests
+    addCheck: false
